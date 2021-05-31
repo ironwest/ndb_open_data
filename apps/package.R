@@ -1,0 +1,19 @@
+#file for package detection 
+#Do not use Japanese in this file!
+
+library(shiny)
+library(shinyWidgets)
+library(dplyr)
+library(magrittr)
+library(colorspace)
+library(DT)
+library(openxlsx)
+library(officer)
+library(stringr)
+library(purrr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(shinycssloaders)
+library(showtext)
+
