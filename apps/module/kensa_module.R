@@ -15,12 +15,12 @@ library(shinycssloaders)
 
 showtext_auto()
 
-source("functions.R", encoding = "UTF-8")
-
+source("functions/functions.R", encoding = "UTF-8")
 
 kensaUI <- function(id){
   ns <- NS(id)
   
+  #data and setting file------------------------
   raw_data <- read_rds("data/processed/tokutei_kensin/data.rds")
   set_koumoku <- read_rds("setting/ndb_kensa_koumoku.rds")
   set_pref <- read_rds("setting/ndb_prefecture.rds")
@@ -28,7 +28,7 @@ kensaUI <- function(id){
   set_kubun <- read_rds("setting/ndb_kensa_kubun.rds")
   set_nendo <- read_rds("setting/ndb_nendo.rds")
   
-  
+  #ui side panel ----------------------------------
   side_panel <- sidebarPanel(
     h2("設定:"),
     pickerInput(ns("seireki"),"西暦年",choices=2014:2017,selected = 2017),
@@ -46,6 +46,8 @@ kensaUI <- function(id){
     width=3
   )
   
+  #ui----------------------------------------
+  
   ui <- fluidPage(
     title = "NDBオープンデータ可視化:特定健診",
     titlePanel("NDBオープンデータ可視化:特定健診検査結果"),
@@ -56,32 +58,32 @@ kensaUI <- function(id){
           tabPanel(
             title = "全都道府県グラフ",
             fluidRow(
-              column(width=6,withSpinner(plotOutput(ns("graph_bar_all_pref"))) , height=400),
-              column(width=6,withSpinner(plotOutput(ns("graph_line_all_pref"))), height=400)
+              column(width=6, withSpinner( plotOutput( ns("graph_bar_all_pref") , height=400)) ),
+              column(width=6, withSpinner( plotOutput( ns("graph_line_all_pref"), height=400)) )
             )
           ),
           tabPanel(
             title = "全都道府県:男女別グラフ",
             fluidRow(
-              column(width=6,withSpinner(plotOutput(ns("graph_bar_all_pref_male"))), height=400),
-              column(width=6,withSpinner(plotOutput(ns("graph_line_all_pref_male"))), height=400)
+              column(width=6, withSpinner( plotOutput( ns("graph_bar_all_pref_male") , height=400)) ),
+              column(width=6, withSpinner( plotOutput( ns("graph_line_all_pref_male"), height=400)) )
             ),
             fluidRow(
-              column(width=6,withSpinner(plotOutput(ns("graph_bar_all_pref_female"))), height=400),
-              column(width=6,withSpinner(plotOutput(ns("graph_line_all_pref_female"))), height=400)
+              column(width=6, withSpinner( plotOutput( ns("graph_bar_all_pref_female") , height=400)) ),
+              column(width=6, withSpinner( plotOutput( ns("graph_line_all_pref_female"), height=400)) )
             )
           ),
           tabPanel(
             title = "全都道府県:年齢別グラフ",
             fluidRow(
-              column(width=6, withSpinner(plotOutput(ns("graph_bar_all_pref_age"))), height=400),
-              column(width=6, withSpinner(plotOutput(ns("graph_line_all_pref_age"))), height=400)
+              column(width=6, withSpinner( plotOutput( ns("graph_bar_all_pref_age") , height=400)) ),
+              column(width=6, withSpinner( plotOutput( ns("graph_line_all_pref_age"), height=400)) )
             )
           ),
           tabPanel(
             title = "年齢、性別別グラフ",
             fluidRow(
-              column(width=12,withSpinner(plotOutput(ns("graph_age_sex"))),height=800)
+              column(width=12, withSpinner( plotOutput( ns("graph_age_sex"), height=800)) )
             )
           ),
           tabPanel(
@@ -91,7 +93,7 @@ kensaUI <- function(id){
                      checkboxGroupButtons(
                        inputId = ns("groupvar"),
                        label = "集計する変数を指定",
-                       choices=c("都道府県" = "pref", "性別"="sex","年齢区分"="age"),
+                       choices=c("年度"="seireki","都道府県" = "pref", "性別"="sex","年齢区分"="age"),
                        select = "都道府県")
               ),
               column(width=6,
@@ -99,14 +101,11 @@ kensaUI <- function(id){
                        inputId = ns("kensa_kubun"),
                        label="割合を計算する検査区分を指定",
                        choices=c("複数区分","2値区分"))),
-              column(width=12, dataTableOutput("hyou"))
+              column(width=12, dataTableOutput(ns("hyou")))
             )
-          )
-        )
-      )))
-  
-  return(ui)
-}
+          )))))
+}      
+
 
 kensaServer <- function(id){
   moduleServer(
@@ -127,7 +126,6 @@ kensaServer <- function(id){
       })
       
       output$kubun_d <- renderUI({
-        require(input$kense)
         
         choices <- unique(levlab()$label)
         upto <- choices[length(choices)-1]

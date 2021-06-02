@@ -14,7 +14,7 @@ library(showtext)
 
 showtext_auto()
 
-source("functions.R", encoding = "UTF-8")
+source("functions/functions.R", encoding = "UTF-8")
 
 raw_data <- read_rds("data/processed/tokutei_kensin/data.rds")
 set_koumoku <- read_rds("setting/ndb_kensa_koumoku.rds")

@@ -15,8 +15,9 @@ library(shinydashboard)
 
 showtext_auto()
 
-source("functions.R", encoding = "UTF-8")
-source("module/kensa_module.R", encoding = "UTF-8")
+source("functions/functions.R" , encoding = "UTF-8")
+source("module/kensa_module.R" , encoding = "UTF-8")
+source("module/monsin_module.R", encoding = "UTF-8")
 
 # UI-----------------------------
 ## Dashboard Header------------------------------
@@ -34,12 +35,11 @@ dside <- dashboardSidebar(
 
 tab_kensa <- tabItem(tabName = "kensa",kensaUI("kensa"))
 
-tab_monsin <- tabItem(tabName = "monsin", "MONSIN")
+tab_monsin <- tabItem(tabName = "monsin", monsinUI("monsin"))
 
 dbody <- dashboardBody(
   tabItems(
-    tab_kensa,
-    tab_monsin
+    tab_kensa,tab_monsin
   )
 )
 
@@ -48,6 +48,7 @@ ui <- dashboardPage(header = dhead, sidebar = dside, body = dbody)
 #Server----------------------------
 server <- function(input, output){
   kensaServer("kensa")
+  monsinServer("monsin")
 }
 
 shinyApp(ui,server)

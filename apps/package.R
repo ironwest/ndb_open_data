@@ -16,4 +16,5 @@ library(tidyr)
 library(ggplot2)
 library(shinycssloaders)
 library(showtext)
-
+library(shinydashboard)
+library(knitr)

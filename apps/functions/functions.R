@@ -10,7 +10,7 @@ library(dplyr)
 library(stringr)
 library(tidyr)
 
-
+#特定健診：検査---------------------------
 #読み込んだ特定健診データから検査名でfilterする
 filter_kensa <- function(.data,target_kensa,set_kubun,set_nendo){
   
@@ -45,7 +45,6 @@ extract_levlab <- function(target_kensa, set_kubun){
   return(list(level = tgt_lev, label = tgt_lab))
 }
 
-
 #絞り込んだ検査値から、検査値階層を因子化する
 factorize_kensa <- function(.data, target_kensa, set_kubun){
   levlab <-  extract_levlab(target_kensa,set_kubun) 
@@ -54,6 +53,17 @@ factorize_kensa <- function(.data, target_kensa, set_kubun){
    mutate(kaisou = factor(kaisou,levels = levlab$level, labels = levlab$label))
  
  return(.data)
+}
+
+factorize_monsin <- function(.data, target_monsin, set_kubun){
+  
+  tgt_level <- set_kubun$lev[str_c("q",formatC(as.numeric(target_monsin),width=2,flag=0))][[1]] 
+  tgt_label <- set_kubun$lab[str_c("q",formatC(as.numeric(target_monsin),width=2,flag=0))][[1]]
+  
+  .data <- .data %>% 
+    mutate(answer = factor(answer, levels=tgt_level, labels = tgt_label))
+  
+  return(.data)
 }
 
 #ndbの回に西暦データを追加する
@@ -84,6 +94,32 @@ add_dichotomous <- function(.data, target_kensa, low_lev){
   
 }
 
+#特定健診：問診---------------------------
+##読み込んだ特定健診データから検査名でfilterする
+filter_monsin <- function(.data, target_monsin, set_kubun, set_nendo){
+  raw_data %>% 
+    filter(as.numeric(file_qnum) == as.numeric(target_monsin)) %>% 
+    filter(ndb == "")
+  
+  dat <- .data %>% 
+    filter(str_detect(kensa_koumoku, target_kensa)) %>% 
+    select(ndb = dir3, kensa_koumoku, long_data) %>% 
+    unnest(c(long_data)) %>% 
+    factorize_kensa(., target_kensa,set_kubun) %>% 
+    convert_ndb_to_seireki(set_nendo)
+  return(dat)
+}
+
+##01―22の文字列から短縮問診を取得
+pull_monsin_long <- function(q,set_monsin){
+  
+  set_monsin %>% filter(qnum == q) %>% pull(qtext)
+}
+
+pull_monsin_short <- function(q,set_monsin){
+  set_monsin %>% filter(cat == q) %>% pull(short)
+}
+
 #特定のグループ変数を利用して割合を計算
 make_total <- function(ken, ...){
   group_these <- syms(c(...))
@@ -105,6 +141,21 @@ make_percent <- function(ken, kaisou = "m",...){
   total_data <- make_total(ken, ...)
   
   res <- ken %>% 
+    group_by(!!!group_these) %>% 
+    summarise(value = sum(value,na.rm=TRUE)) %>% 
+    left_join(total_data, by = c(...)) %>% 
+    mutate(perc = value/total) %>% 
+    ungroup()
+  
+  return(res)
+}
+
+make_monsin_percent <- function(mon, ...){
+  
+  group_these <- syms(c(...,"answer"))
+  total_data <- make_total(ken = mon, ...)
+  
+  res <- mon %>% 
     group_by(!!!group_these) %>% 
     summarise(value = sum(value,na.rm=TRUE)) %>% 
     left_join(total_data, by = c(...)) %>% 
