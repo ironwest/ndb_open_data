@@ -11,7 +11,10 @@ library(readr)
 library(tidyr)
 library(ggplot2)
 library(showtext)
-library(shinydashboard)
+library(shinycssloaders)
+library(knitr)
+library(cowplot)
+library(geofacet)
 
 showtext_auto()
 

@@ -15,6 +15,7 @@ library(shinycssloaders)
 library(knitr)
 library(cowplot)
 library(geofacet)
+library(plotly)
 
 showtext_auto()
 
@@ -61,7 +62,7 @@ ika_pref_UI <- function(id){
         title = "経年変化(算定回数)",
         value = "cont_num",
         fluidRow(
-          column(width=12, withSpinner( plotOutput( ns("cont_num_facet")  ,height=800) ) ),
+          column(width=12, withSpinner( plotlyOutput( ns("cont_num_facet")  ,height=800) ) ),
         )
       ),
       tabPanel(
@@ -83,7 +84,7 @@ ika_pref_UI <- function(id){
                  checkboxGroupButtons(
                    inputId = ns("groupvar"),
                    label = "集計する変数を指定",
-                   choices=c("年度" = "nendo", "性別"="sex","年齢区分"="age"),
+                   choices=c("年度" = "nendo", "都道府県"="prefname"),
                    selected = "nendo")
           ),
           column(width=12, dataTableOutput(ns("hyou")))
@@ -176,42 +177,65 @@ ika_pref_Server <- function(id){
           filter(in_out == input$inout)
       })
       
+      #グラフ生成関数--------------------
+      gen_blank <- function(){
+        ggplot() +
+          geom_text(aes(1,1,label="診療行為を選択してください"))+
+          theme_void(base_size=24)
+      }
       
-      #単年度グラフ------------------------------------------
-      output$single_all_pref <- renderPlot({
+      gen_single_all_pref <- function(.data, tgt_seireki, tgt_pref){
+        gdat <- .data %>% 
+          filter(nendo == tgt_seireki) %>% 
+          mutate(color_this = prefid == tgt_pref)
         
-        gdat <- filtered_dat() %>% 
-          filter(nendo == input$seireki) %>% 
-          mutate(color_this = prefid == input$pref)
-  
         ggplot(gdat) +
           geom_col(aes(x = value, y = reorder(prefname, value), fill = color_this)) +
           scale_x_continuous(labels=scales::comma,guide = guide_axis(angle=45)) +
           scale_y_discrete(guide = guide_axis(n.dodge=2)) +
           scale_fill_manual(values = c("grey60","skyblue")) +
-          labs(x = "算定件数", y = "都道府県",title = str_c(input$seireki,"年度の算定件数")) +
+          labs(x = "算定件数", y = "都道府県",title = str_c(tgt_seireki,"年度の算定件数")) +
           theme_bw(base_size = 18) +
           theme(legend.position = "none", 
                 plot.title.position = "plot")
-
+      }
+      
+      #単年度グラフ------------------------------------------
+      output$single_all_pref <- renderPlot({
+        
+        if(is.null(input$sinryou_koui_rows_selected)){
+          gg <- gen_blank()
+        }else{
+          gg <- gen_single_all_pref(filtered_dat(), input$seireki, input$pref)
+        }
+        
+        return(gg)
       })
       
-      output$map_single <- renderPlot({
-        gdat <- filtered_dat() %>% filter(nendo == input$seireki)
+      gen_map_single <- function(.data, tgt_seireki, tgt_pref){
+        gdat <- .data %>% filter(nendo == tgt_seireki)
         
         gdat2 <- gdat %>% 
           left_join(map_dat, by = c("prefname" = "name_ja")) %>% 
-          mutate(color_this = prefid == input$pref)
-      
+          mutate(color_this = prefid == tgt_pref)
         
         ggplot(gdat2) +
           geom_sf(aes(geometry = geometry, fill=as.numeric(value), color=color_this),size=1) +
           scale_fill_viridis_c(name = "算定回数", labels = scales::comma) +
           scale_color_manual(values = c(NA,"red"), guide = guide_none()) +
           coord_sf(xlim = c(127,146), ylim = c(25,46)) +
-          #labs( title = str_c(input$seireki,"年度の算定件数地図")) +
           theme_bw(base_size = 18)
+      }
+      
+      output$map_single <- renderPlot({
         
+        if(is.null(input$sinryou_koui_rows_selected)){
+          gg <- gen_blank()
+        }else{
+          gg <- gen_map_single(filtered_dat(), input$seireki, input$pref)
+        }
+        
+        return(gg)
       })
       
       cont_dat <- reactive({
@@ -224,34 +248,36 @@ ika_pref_Server <- function(id){
         return(gdat2)
       })
 
-      
-      output$cont_num_facet <- renderPlot({
-        gdat <- cont_dat()
+      gen_cont_num_facet <- function(.data){
         
-        tgt_pref_name <- cont_dat() %>% 
-              filter(color_this) %>%
-              pull(prefname)
+        tgt_pref_name <- .data %>% 
+          filter(color_this) %>%
+          pull(prefname) %>% unique()
         
-        gdat <- gdat %>% 
+        gdat <- .data %>% 
           mutate(prefpos = as.numeric(prefid))
         
-        pref_match <- gdat %>% select(prefid, prefname) %>% distinct()
         
-        jp_prefs_grid1 <- jp_prefs_grid1 %>% 
-          left_join(pref_match, by=c("code_pref_jis"="prefid"))
-        
-        ggplot(gdat) +
-          geom_line(aes(x = nendo, y = value, group = prefname, color = color_this, size = color_this)) +
-          scale_color_manual(values = c("grey60","skyblue")) +
-          scale_size_manual(values = c(1,2)) +
+        gdat %>% 
+        ggplot() +
+          geom_line(aes(x = nendo, y = value, group = prefname, color = prefname)) +
           scale_y_continuous(labels = scales::comma) +
           scale_x_continuous(guide = guide_axis(angle=90)) +
-          theme_bw(base_size = 8) +
+          theme_bw(base_size = 18) +
           labs(x = NULL, y = NULL, title="都道府県別の算定回数の経年変化") +
-          theme(legend.position = "none", plot.title.position = "plot") +
-          facet_geo(~prefname,grid = "jp_prefs_grid1")
+          theme(plot.title.position = "plot")
         
+      }
+      
+      output$cont_num_facet <- renderPlotly({
         
+        if(is.null(input$sinryou_koui_rows_selected)){
+          gg <- gen_blank()
+        }else{
+          gg <- gen_cont_num_facet(cont_dat())
+        }
+        
+        return( ggplotly(gg) )
       })
       
       #変化---------------------------
@@ -278,12 +304,10 @@ ika_pref_Server <- function(id){
         
       })
       
-      output$change_all_pref <- renderPlot({
-        gdat <- change_dat()
+      gen_change_all_pref <- function(.data, fromto){
+        graph_title <- str_c("算定回数変化割合(%):\n\n",str_c(fromto,collapse="から"),"まで")
         
-        graph_title <- str_c("算定回数変化割合(%):\n\n",str_c(input$from_to,collapse="から"),"まで")
-        
-        ggplot(gdat) +
+        ggplot(.data) +
           geom_col(aes(x = change, y = reorder(prefname, change), fill = color_this)) +
           scale_x_continuous(labels=scales::percent,guide = guide_axis(angle=45)) +
           scale_y_discrete(guide = guide_axis(n.dodge=2)) +
@@ -292,21 +316,137 @@ ika_pref_Server <- function(id){
           theme_bw(base_size = 16) +
           theme(legend.position = "none", 
                 plot.title.position = "plot")
+      }
+      
+      #OUTPUT$change_all_pref---------------------------
+      output$change_all_pref <- renderPlot({
+        if(is.null(input$sinryou_koui_rows_selected)){
+          gg <- gen_blank()
+        }else{
+          gg <- gen_change_all_pref(change_dat(), input$from_to)
+        }
+       
+        return(gg)
       })
       
-      output$map_change <-renderPlot({
-        gdat2 <- gdat %>% 
-          left_join(map_dat, by = c("prefname" = "name_ja")) %>% 
-          mutate(color_this = prefid == input$pref)
+      
+      gen_map_change <- function(.data){
+        gdat <- .data %>% 
+          left_join(map_dat, by = c("prefname" = "name_ja"))
         
-  
-        ggplot(gdat2) +
+        ggplot(gdat) +
           geom_sf(aes(geometry = geometry, fill=as.numeric(change), color=color_this),size=1) +
-          scale_fill_viridis_c(name = "年度間の変化割合", labels = scales::comma) +
+          scale_fill_viridis_c(name = "年度間の変化割合", labels = scales::percent) +
           scale_color_manual(values = c(NA,"red"), guide = guide_none()) +
           coord_sf(xlim = c(127,146), ylim = c(25,46)) +
           theme_bw(base_size = 18)
+      }
+      
+      #output$map_change-------------------------------
+      output$map_change <-renderPlot({
+        if(is.null(input$sinryou_koui_rows_selected)){
+          gg <- gen_blank()
+        }else{
+          gg <- gen_map_change(change_dat())
+        }
+        
+        return(gg)
       })
+      
+      #output$hyou-------------------
+      hyou_data <-reactive({
+        if(nrow(filtered_dat())==0){
+          return(tibble("診療行為を選択してください"))  
+        }else{
+          
+          grpthese <- rlang::syms(input$groupvar)
+          
+          filtered_dat() %>% 
+            group_by(!!!grpthese) %>% 
+            summarise(
+              in_out = last(in_out),
+              sinryou_code = last(sinryou_code),
+              sinryou = last(sinryou),
+              value = sum(value, na.rm=TRUE),
+              tensu = last(tensu)
+            )
+        }
+        
+        
+      })
+      
+      output$hyou <- renderDataTable({
+        hyou_data()
+      })
+      
+      #ダウンロードロジック------------------------
+      ## 表------------------------------
+      output$dlexcel <- downloadHandler(
+        filename = function(){
+          
+          gv <- input$groupvar
+          koui <- koui_name()
+          txt_gv <- str_c(gv,collapse="_")
+          
+          fn <- str_c("table_pref_",koui,"_",Sys.Date(),"_", txt_gv,".xlsx")
+          
+          return(fn)  
+        },
+        content = function(file){
+          
+          wb <- createWorkbook()
+          addWorksheet(wb,"table")
+          writeData(wb,"table",hyou_data())
+          saveWorkbook(wb,file=file)
+        }
+      )
+      
+      ## PPT---------------------------
+      output$dlppt <- downloadHandler(
+        filename = function(){
+          gv <- input$groupvar
+          koui <- koui_name()
+          txt_gv <- str_c(gv,collapse="_")
+          
+          fn <- str_c("ppt_pref_",koui,"_",Sys.Date(),"_", txt_gv,".pptx")
+          
+          return(fn)
+        },
+        content = function(file){
+          ppttextsize <- 36
+          
+          g1 <- gen_single_all_pref(filtered_dat(), input$seireki, input$pref) +
+            labs(title = str_c(input$seireki,"年度:",koui_name(),"の算定回数"))
+          
+          g2 <- gen_map_single(filtered_dat(), input$seireki, input$pref) +
+            labs(title = str_c(input$seireki,"年度:",koui_name(),"の算定回数(地図)"))
+          
+          g3 <- gen_cont_num_facet(cont_dat()) +
+            labs(title = str_c(koui_name(),"の算定回数(経年変化)"))
+          
+          g4 <- gen_change_all_pref(change_dat(), input$from_to) +
+            labs(title = str_c(koui_name(),":算定回数変化割合(%)", str_c(input$from_to,collapse="-")))
+          
+          g5 <- gen_map_change(change_dat()) +
+            labs(title = str_c(koui_name(),":算定回数変化割合(%,地図)", str_c(input$from_to,collapse="-")))
+          
+          g1 <- g1 + theme(text = element_text(size = ppttextsize))
+          g2 <- g2 + theme(text = element_text(size = ppttextsize))
+          g3 <- g3 + theme(text = element_text(size = ppttextsize))
+          g4 <- g4 + theme(text = element_text(size = ppttextsize))
+          g5 <- g5 + theme(text = element_text(size = ppttextsize))
+          
+          
+          pres <- read_pptx() %>% 
+            add_slide() %>% ph_with(value = g1, location=ph_location_fullsize()) %>% 
+            add_slide() %>% ph_with(value = g2, location=ph_location_fullsize()) %>% 
+            add_slide() %>% ph_with(value = g3, location=ph_location_fullsize()) %>% 
+            add_slide() %>% ph_with(value = g4, location=ph_location_fullsize()) %>% 
+            add_slide() %>% ph_with(value = g5, location=ph_location_fullsize())
+          
+          print(pres, file)
+        }
+      )
     }
   )
 }
