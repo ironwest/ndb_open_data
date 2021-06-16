@@ -30,7 +30,7 @@ ika_sex_age_UI <- function(id){
   
   side_panel <- sidebarPanel(
     h2("設定:"),
-    pickerInput(ns("seireki"),"西暦年",choices=2014:2017,selected = 2017),
+    pickerInput(ns("seireki"),"西暦年",choices=2015:2018,selected = 2018),
     pickerInput(ns("agegrp"),"年齢",choices=set_age,selected=1),
     pickerInput(ns("inout"), "入院/外来", choices="診療行為を選択してください",selected=1),
     tags$b("診療行為を選択"),
@@ -143,7 +143,7 @@ ika_sex_age_Server <- function(id){
           left_join(selected_koui, by=c("sinryou_code")) %>% 
           left_join(
             tibble(ndb = as.character(2:5),
-                   nendo = 2014:2017), by = "ndb"
+                   nendo = 2015:2018), by = "ndb"
           ) %>% 
           left_join(
             set_tensu,
@@ -191,8 +191,8 @@ ika_sex_age_Server <- function(id){
         }
         
         #全部の年度がそろっているかを確認
-        if( any(!c(2014:2017) %in% .gdata$nendo) ){
-          add_this <- tibble(nendo = c(2014:2017))
+        if( any(!c(2015:2018) %in% .gdata$nendo) ){
+          add_this <- tibble(nendo = c(2015:2018))
           
           .gdata <- add_this %>% left_join(.gdata,by="nendo") %>% 
             replace_na(list(yval=0))

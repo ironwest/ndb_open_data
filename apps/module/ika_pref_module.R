@@ -33,7 +33,7 @@ ika_pref_UI <- function(id){
   
   side_panel <- sidebarPanel(
     h2("設定:"),
-    sliderInput(ns("seireki"),"西暦年",min=2014, max=2017,value = 2017, sep=""),
+    sliderInput(ns("seireki"),"西暦年",min=2015, max=2018,value = 2018, sep=""),
     pickerInput(ns("pref"),"都道府県",choices=choice_pref, selected=1),
     pickerInput(ns("inout"), "入院/外来", choices="診療行為を選択してください",selected=1),
     tags$b("診療行為を選択"),
@@ -152,7 +152,7 @@ ika_pref_Server <- function(id){
           left_join(selected_koui, by=c("sinryou_code")) %>%
           left_join(
             tibble(ndb = as.character(2:5),
-                   nendo = 2014:2017), by = "ndb"
+                   nendo = 2015:2018), by = "ndb"
           ) %>%
           left_join(
             set_tensu,
