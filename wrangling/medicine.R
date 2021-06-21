@@ -1,4 +1,4 @@
-#診療行為の加工のためのスクリプト
+
 
 library(tidyverse)
 library(readxl)

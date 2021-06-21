@@ -36,6 +36,19 @@ iyakuhin_tensu <- age_data %>%
          iyakuhin_name, unit, yj_code, yakka, is_generic, yakka) %>% 
   distinct()
 
+iyakuhin_tensu %>% slice(1:100) %>%  pull(1) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(2) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(3) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(4) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(5) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(6) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(7) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(8) %>% guess_encoding()
+iyakuhin_tensu %>% slice(1:100) %>%  pull(9) %>% guess_encoding()
+
+iyakuhin_tensu <- iyakuhin_tensu %>% 
+  mutate(med_type = utf8::as_utf8(med_type))
+
 #医薬品コード（レセプト電算処理システム用コード）は製品毎
 #Ｙｊコードは区分含めて絞り込むのに使える。
 
@@ -92,10 +105,26 @@ write_rds(
 pref_data2 <- pref_data2 %>% 
   mutate(prefid = factor(prefid), 
          prefname = factor(prefname))
-  
+
+pref_data3 <- pref_data2 %>% 
+  mutate(med_type = utf8::as_utf8(med_type))
+
+pref_data3 %>% slice(1:100) %>% pull(1) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(2) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(3) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(4) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(5) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(6) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(7) %>% guess_encoding()
+pref_data3 %>% slice(1:100) %>% pull(8) %>% guess_encoding()
+a <- pref_data3 %>% slice(1:1) %>% pull(9)
+
+
+
+pref_data3$med_type[1:100] %>% guess_encoding()
 
 write_rds(
-  pref_data2,
+  pref_data3,
   file.path("apps","data","processed","medicine","pref_data_light.rds"), compress="gz"
 )
 
