@@ -91,6 +91,9 @@ age_level <- c(
 age_data2 <- age_data2 %>% 
   mutate(age = factor(age, levels = vec_age))
 
+##########
+age_data2$med_type <- stringi::stri_enc_toutf8(age_data2$med_type)
+
 write_rds(
   age_data2,
   file.path("apps","data","processed","medicine","age_data_light.rds"),compress="gz"
