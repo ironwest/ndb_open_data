@@ -4,3 +4,5 @@
 .Ruserdata
 apps/rsconnect
 data/ndb
+!data/ndb/links_excel_modified.xlsx
+!data/ndb/links_excel.xlsx
